@@ -72,9 +72,11 @@ void setup(void) {
   Serial.println(numberOfFiles);
 
   //Get currentFileNumber and currentTimeIndex from EEProm
+  //Even though EEPROM reads and writes a byte to and uint16_t 
+  //it works okay as these are always below 255
   currentFileNumber = EEPROM.read(0);
   currentTimeIndex = EEPROM.read(1);
-  //Run out of files???
+  //Check if file index is too big.
   if (currentFileNumber > numberOfFiles - 1) currentFileNumber = 0;
   Serial.print("File Number: ");
   Serial.println(currentFileNumber);
@@ -117,6 +119,7 @@ void gotoNextFile() {
 }
 
 void playPodcast() {
+  DFPlayer.enableAMP();
   t1 = millis();
   sleepTimerOn = true;
   //run out of files??
@@ -136,7 +139,7 @@ void playPodcast() {
   uint16_t startAt = tenMinutes * currentTimeIndex;
   Serial.println(startAt);
   DFPlayer.setPlayTime(0);
-  DFPlayer.setVol(0); //skiping noise off
+  DFPlayer.setVol(0); //Set volume so skiping FF noise not heard
   setTimeUsingFF(startAt);
   DFPlayer.start();
 }
@@ -174,17 +177,17 @@ void sleepTimer() {
     }
   }
 
-  //Compare Milliseconds
+  //Compare seconds
   if (sleepTimerOn && (t2 - t1) / 1000 > long(tenMinutes)) {
     sleepTimerOn = false;
     Serial.println("Timer Off");
     DFPlayer.pause();
+    DFPlayer.disableAMP(); //Save power?
     currentTimeIndex++; //Ten minutes has passed so increment for next restart
     //Reached end of current file?
     //go to next file
     if (tenMinutes * uint16_t(currentTimeIndex) > DFPlayer.getTotalTime()) {
       currentFileNumber++;
-      DFPlayer.next();
       currentTimeIndex = 0;
     }
     //Save to EEPROM
